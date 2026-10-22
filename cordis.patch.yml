@@ -33,7 +33,7 @@
 
 - insert:
     - id: dsh-balance-panel
-      name: 'dsh-balance-panel'
+      name: '@sunshaobei/dsh-balance-panel'
       config:
         refreshMs: 60000
         # No explicit providers: the built-in catalog auto-discovers every
