@@ -1,3 +1,6 @@
+# dsh-balance-panel
+
+> Fork of wenzetan/dsh-quota-panel, maintained at sunshaobei/dsh-balance-panel (npm: @sunshaobei/dsh-balance-panel). Renamed to avoid confusion with upstream.
 # dsh-quota-panel
 
 English | [中文](README.zh.md)
