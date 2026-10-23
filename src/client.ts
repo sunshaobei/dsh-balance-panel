@@ -25,7 +25,7 @@
  * follows the product theme (light/dark) instead of carrying its own palette.
  */
 (window as any).__ModuleLoader__.load({
-	id: "dsh-balance-panel",
+	id: "@sunshaobei/dsh-balance-panel",
 	factory: (require) => {
 		var module = { exports: {} as any };
 		var exports = module.exports;

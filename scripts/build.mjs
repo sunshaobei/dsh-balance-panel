@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { runInNewContext } from "node:vm";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -71,8 +72,13 @@ transpile({
 	output: "lib/client.js",
 	module: ts.ModuleKind.None,
 	validate: (output) => {
-		if (!output.includes("__ModuleLoader__")) {
-			throw new Error("client build produced no ModuleLoader wrapper — refusing to write");
+		const manifest = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
+		const registrations = [];
+		runInNewContext(output, {
+			window: { __ModuleLoader__: { load: (entry) => registrations.push(entry) } }
+		});
+		if (registrations.length !== 1 || registrations[0].id !== manifest.name || typeof registrations[0].factory !== "function") {
+			throw new Error(`client must register exactly one factory as ${manifest.name} — refusing to write`);
 		}
 	}
 });

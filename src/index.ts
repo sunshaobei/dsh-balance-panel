@@ -292,6 +292,27 @@ let chatgptTokenCache: { bundle: ChatGPTTokenBundle } | null = null;
 // dsh-codex-auth writes (llm-pi-ai/openai-codex).
 let codexCredentialsRef: any = null;
 
+// Auto-detected local proxy for ChatGPT/Codex upstream calls. The usage and
+// token endpoints are region-blocked on direct connections, and Node's fetch
+// never reads the OS proxy — so when the panel row has no explicit proxy we
+// probe the well-known local proxy ports once and remember the answer.
+let localProxyCache: string | undefined | null = null; // null = not probed yet
+async function detectLocalProxy(): Promise<string | undefined> {
+	if (localProxyCache !== null) return localProxyCache || undefined;
+	for (const port of [7897, 7890, 1087, 8118, 6152]) {
+		const ok = await new Promise<boolean>((resolve) => {
+			const req = http.request({ host: '127.0.0.1', port, method: 'CONNECT', path: 'chatgpt.com:443', timeout: 2000 });
+			req.on('connect', (res, socket) => { socket.destroy(); resolve(res.statusCode === 200); });
+			req.on('error', () => resolve(false));
+			req.on('timeout', () => { req.destroy(); resolve(false); });
+			req.end();
+		});
+		if (ok) { localProxyCache = 'http://127.0.0.1:' + port; break; }
+	}
+	if (localProxyCache === null) localProxyCache = '';
+	return localProxyCache || undefined;
+}
+
 async function readChatGPTAuthFile(): Promise<ChatGPTTokenBundle> {
 	const authJson = chatgptAuthJsonPath();
 	let raw: string;
@@ -1628,7 +1649,7 @@ async function fetchRow(ctx, provider, proxies, clientProxyUrl) {
 				// query AND token refresh — same region constraints apply.
 				const cgProxy = clientProxyUrl !== undefined
 					? clientProxyUrl
-					: (provider.proxy !== undefined ? proxies[provider.proxy] : undefined);
+					: (provider.proxy !== undefined ? proxies[provider.proxy] : await detectLocalProxy());
 				let { accessToken, accountId } = await resolveChatGPTToken(UPSTREAM_TIMEOUT_MS, cgProxy);
 				let body: any;
 				try {
