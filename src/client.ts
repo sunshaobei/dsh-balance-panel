@@ -39,6 +39,10 @@
 		// (from the host's modelDirectories service) into this tiny store;
 		// the indicator component subscribes to it.
 		var selStore = { sel: null, listeners: new Set() };
+		let clientLogQueue = Promise.resolve();
+		function clientLog(line) {
+			clientLogQueue = clientLogQueue.then(() => ctx.connection.rpc.call(CHANNEL, 'client-log', { line })).catch(() => {});
+		}
 		function setSel(next) {
 			var cur = selStore.sel;
 			if (!cur && !next) return;
@@ -46,6 +50,7 @@
 			// republishes the same value on every tick).
 			if (cur && next && cur.provider === next.provider && cur.model === next.model && cur.src === next.src) return;
 			selStore.sel = next;
+			clientLog('setSel provider=' + JSON.stringify(next && next.provider) + ' model=' + JSON.stringify(next && next.model) + ' src=' + JSON.stringify(next && next.src));
 			selStore.listeners.forEach(function (l) { l(next); });
 		}
 		/** Map a provider/model/spec string to a coarse provider family key. */
@@ -1149,6 +1154,7 @@
 				// expands the full card with EVERY provider.
 				var RING_R = 7, RING_C = 2 * Math.PI * RING_R;
 				var curSpec = matchSpec(specs, sel);
+				if (specs && specs.rows) clientLog('capsule sel=' + JSON.stringify(sel) + ' rows=[' + specs.rows.map(function (r3x) { return r3x.id + ':' + r3x.kind; }).join(',') + '] matched=' + (curSpec ? curSpec.id : 'null'));
 				var curView = curSpec ? views[curSpec.id] : null;
 				// Compact window group: small ring first, tiny label beside it.
 				var makeRing = function (key, pct, status, label) {
