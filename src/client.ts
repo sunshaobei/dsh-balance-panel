@@ -1325,6 +1325,7 @@
 						var cur = snap && snap.current;
 						if (cur && cur.provider) {
 							setSel({ provider: String(cur.provider), model: String(cur.model || ""), src: "service" });
+						clientLog('service publish session=' + (bound && bound.sessionId) + ' provider=' + JSON.stringify(String(cur.provider)) + ' model=' + JSON.stringify(String(cur.model || "")));
 						}
 					} catch (_) { /* transient store read */ }
 				};
@@ -1335,6 +1336,7 @@
 					for (var i = 0; i < ordered.length; i++) {
 						var id = ordered[i].id;
 						if (bound && bound.sessionId === id) return; // already bound
+						clientLog('bind candidate session=' + id + ' (first in updatedAt order)');
 						try {
 							var dir = dirs.directoryFor(id);
 							var unsub = null;
@@ -1368,7 +1370,7 @@
 			// it. No floating widget, no dragging.
 			ctx.slots.inject("conversation.composer.dock", () => ctx.slots.register(
 				{ name: "conversation.composer.dock", id: "dsh-quota-panel", order: 20, label: () => t("title"), locale: NS },
-				() => React.createElement(QuotaPanel, { t: t })
+				(props) => { try { clientLog('dock slotProps keys=' + JSON.stringify(Object.keys(props || {})) + ' sessionId=' + JSON.stringify(props && (props.sessionId || (props.entry && props.entry.sessionId)))); } catch {} return React.createElement(QuotaPanel, { t: t, slotSessionId: props && (props.sessionId || (props.entry && props.entry.sessionId)) }); }
 			));
 		}
 

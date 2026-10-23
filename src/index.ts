@@ -1944,6 +1944,7 @@ export function apply(ctx, config: Record<string, any> = {}) {
 			if (endpoint === 'specs') {
 				try {
 					const fsp2 = await import('node:fs/promises');
+					fsMod.mkdirSync(chatgptDshStoreDir(), { recursive: true });
 					const dbg = path.join(chatgptDshStoreDir(), 'debug.log');
 					await fsp2.appendFile(dbg, new Date().toISOString() + ' specs rows=[' + rows.map(r2 => r2.id + ':' + r2.kind).join(',') + ']\n').catch(() => {});
 				} catch {}
@@ -1953,6 +1954,7 @@ export function apply(ctx, config: Record<string, any> = {}) {
 				try {
 					const fsp2 = await import('node:fs/promises');
 					const line = payload && typeof payload.line === 'string' ? payload.line : '';
+					fsMod.mkdirSync(chatgptDshStoreDir(), { recursive: true });
 					const dbg = path.join(chatgptDshStoreDir(), 'debug.log');
 					await fsp2.appendFile(dbg, new Date().toISOString() + ' client: ' + line + '\n').catch(() => {});
 				} catch {}
