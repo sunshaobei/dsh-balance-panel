@@ -83,6 +83,11 @@
 			}
 			if (family.length === 0) {
 				var prov = String(sel.provider || "").toLowerCase();
+				// A DOM-fallback selection has no provider: the model name alone
+				// matched no known family, so this model has no known quota
+				// source. Show nothing rather than a wrong provider — an empty
+				// prov would otherwise substring-match EVERY row.
+				if (!prov) return null;
 				for (var j = 0; j < specs.rows.length; j++) {
 					var id = String(specs.rows[j].id || "").toLowerCase();
 					if (prov.indexOf(id) > -1 || id.indexOf(prov) > -1) family.push(specs.rows[j]);
