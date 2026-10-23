@@ -1,7 +1,7 @@
 {
   "name": "@sunshaobei/dsh-balance-panel",
   "description": "Provider quota/balance widget for the dsh web surface: an inline sidebar card above the Settings row (collapsed glanceable row expanding into a Harness-native card with a settings panel), fed by a loopback Connection RPC channel whose host half proxies each provider with credentials that never reach the browser.",
-  "version": "3.0.9",
+  "version": "3.1.0",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -16,6 +16,7 @@
     "cordis.patch.yml"
   ],
   "scripts": {
+    "test": "npm run build && node --test scripts/model-selection.test.mjs",
     "build": "node scripts/build.mjs",
     "prepack": "npm run build"
   },
