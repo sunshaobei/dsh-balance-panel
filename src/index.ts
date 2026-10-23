@@ -287,6 +287,10 @@ interface ChatGPTTokenBundle {
 
 /** In-memory token cache; refreshed on expiry or on auth failure. */
 let chatgptTokenCache: { bundle: ChatGPTTokenBundle } | null = null;
+// Live handle onto the credentials service — set in apply(). Lets the
+// ChatGPT/Codex token resolver read the shared grant record that
+// dsh-codex-auth writes (llm-pi-ai/openai-codex).
+let codexCredentialsRef: any = null;
 
 async function readChatGPTAuthFile(): Promise<ChatGPTTokenBundle> {
 	const authJson = chatgptAuthJsonPath();
@@ -653,6 +657,29 @@ function chatgptLoginStatus(): { active: boolean; verificationUrl?: string; user
 async function resolveChatGPTToken(timeoutMs: number, proxyUrl?: string): Promise<{ accessToken: string; accountId?: string }> {
 	const now = Date.now();
 	const cached = chatgptTokenCache?.bundle;
+	// Source 0: the shared grant record written by dsh-codex-auth
+	// (llm-pi-ai/openai-codex). Preferred when present and fresh: the user
+	// authorized through the Codex subscription settings page, so the panel
+	// should reflect THAT credential instead of ~/.codex/auth.json.
+	try {
+		if (codexCredentialsRef?.readRecord) {
+			const rec: any = await codexCredentialsRef.readRecord('llm-pi-ai/openai-codex');
+			const p = rec && rec.kind === 'grant' ? rec.payload : undefined;
+			if (p && p.access) {
+				if (!p.expires || p.expires - now > 30_000) {
+					chatgptTokenCache = { bundle: { access_token: p.access, refresh_token: p.refresh, expires_at_ms: p.expires, account_id: p.accountId } };
+					return { accessToken: p.access, accountId: p.accountId };
+				}
+				if (p.refresh) {
+					const refreshed = await refreshChatGPTToken(p.refresh, timeoutMs, proxyUrl);
+					if (!refreshed.account_id) refreshed.account_id = p.accountId;
+					await codexCredentialsRef.modifyRecord('llm-pi-ai/openai-codex', async () => ({ kind: 'grant', payload: { ...p, access: refreshed.access_token, refresh: refreshed.refresh_token || p.refresh, expires: refreshed.expires_at_ms } })).catch(() => {});
+					chatgptTokenCache = { bundle: refreshed };
+					return { accessToken: refreshed.access_token, accountId: refreshed.account_id };
+				}
+			}
+		}
+	} catch { /* record absent or unreadable — fall through to the other sources */ }
 	if (cached && cached.access_token && (!cached.expires_at_ms || cached.expires_at_ms - now > 30_000)) {
 		return { accessToken: cached.access_token, accountId: cached.account_id };
 	}
@@ -1830,6 +1857,7 @@ async function fetchRow(ctx, provider, proxies, clientProxyUrl) {
 	 * @param config - raw plugin config (schema-processed by the loader).
 	 */
 export function apply(ctx, config: Record<string, any> = {}) {
+	codexCredentialsRef = ctx.credentials;
 	const raw: Record<string, any> = config && typeof config === 'object' ? config : {};
 	const refreshMs = numOf(raw.refreshMs, 60000);
 	if (!(refreshMs >= 5000)) throw new Error('quota-panel: config.refreshMs must be >= 5000');
